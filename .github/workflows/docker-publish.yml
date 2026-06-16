@@ -27,11 +27,11 @@ jobs:
         with:
           submodules: 'recursive' # 如果你的项目有子模块，确保一并拉取
 
-      # 设置 QEMU 支持多架构编译（可选，若只需 amd64 可移除）
+      # 设置 QEMU 支持多架构编译
       - name: Set up QEMU
         uses: actions/setup-qemu-action@v3
 
-      # 设置 Docker Buildx（现代 Docker 构建的核心组件）
+      # 设置 Docker Buildx
       - name: Set up Docker Buildx
         uses: actions/setup-buildx-action@v3
 
@@ -60,8 +60,9 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ id.meta.outputs.tags }}
-          labels: ${{ id.meta.outputs.labels }}
-          # 开启 GitHub Actions 的专属缓存优化，下次构建速度会翻倍
+          # 修复：去掉了错误的 id. 前缀，换成标准的 steps. 引用
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # 开启 GitHub Actions 的专属缓存优化
           cache-from: type=gha
           cache-to: type=gha,mode=max
