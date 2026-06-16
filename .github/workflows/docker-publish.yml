@@ -25,15 +25,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: 'recursive' # 如果你的项目有子模块，确保一并拉取
+          submodules: 'recursive'
 
-      # 设置 QEMU 支持多架构编译
+      # 修复：改为正确的 docker/ 组织前缀
       - name: Set up QEMU
-        uses: actions/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v3
 
-      # 设置 Docker Buildx
+      # 修复：改为正确的 docker/ 组织前缀
       - name: Set up Docker Buildx
-        uses: actions/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3
 
       # 登录到 GitHub Container Registry (GHCR)
       - name: Log into registry ${{ env.REGISTRY }}
@@ -41,7 +41,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }} # 自动生成，无需手动配置 Secret
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # 自动提取镜像的元数据（Tag、Labels）
       - name: Extract Docker metadata
@@ -60,9 +60,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          # 修复：去掉了错误的 id. 前缀，换成标准的 steps. 引用
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # 开启 GitHub Actions 的专属缓存优化
           cache-from: type=gha
           cache-to: type=gha,mode=max
