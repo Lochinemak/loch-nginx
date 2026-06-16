@@ -1,0 +1,67 @@
+name: Build and Push Nginx Image
+
+# 触发条件：当向 main 分支推送代码，或者手动触发时执行
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+# 定义环境变量
+env:
+  REGISTRY: ghcr.io
+  # 镜像名称默认使用 "用户名/仓库名" 的小写形式
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    # 授予工作流写入 GHCR 的权限
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive' # 如果你的项目有子模块，确保一并拉取
+
+      # 设置 QEMU 支持多架构编译（可选，若只需 amd64 可移除）
+      - name: Set up QEMU
+        uses: actions/setup-qemu-action@v3
+
+      # 设置 Docker Buildx（现代 Docker 构建的核心组件）
+      - name: Set up Docker Buildx
+        uses: actions/setup-buildx-action@v3
+
+      # 登录到 GitHub Container Registry (GHCR)
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }} # 自动生成，无需手动配置 Secret
+
+      # 自动提取镜像的元数据（Tag、Labels）
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      # 核心步骤：构建并推送镜像
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ id.meta.outputs.tags }}
+          labels: ${{ id.meta.outputs.labels }}
+          # 开启 GitHub Actions 的专属缓存优化，下次构建速度会翻倍
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
